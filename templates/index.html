@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3-vibe Local File Host</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #fdf6e3;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #e6b89c;
+            background-color: #fff5e6;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(230, 184, 156, 0.1), 0 2px 4px -1px rgba(230, 184, 156, 0.06);
+        }
+        
+        .drop-zone.dragover {
+            border-color: #e67e22;
+            background-color: #fff0e6;
+            transform: scale(1.02);
+        }
+        
+        .file-preview {
+            transition: all 0.3s ease;
+            background-color: #fff;
+            border: 1px solid #f0e6d2;
+        }
+        
+        .file-preview:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(230, 184, 156, 0.2);
+        }
+        
+        .warm-button {
+            background-color: #e67e22;
+            color: white;
+            transition: all 0.2s ease;
+        }
+        
+        .warm-button:hover {
+            background-color: #d35400;
+            transform: translateY(-1px);
+        }
+        
+        .title-gradient {
+            background: linear-gradient(45deg, #e67e22, #d35400);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold title-gradient mb-2">S3-vibe Local File Host</h1>
+            <p class="text-gray-600">Simple, local file sharing with S3-like vibes</p>
+        </header>
+
+        <div class="max-w-2xl mx-auto">
+            <div id="drop-zone" class="drop-zone rounded-lg p-8 text-center cursor-pointer mb-8">
+                <div class="space-y-4">
+                    <div class="floating">
+                        <svg class="mx-auto h-16 w-16 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                    </div>
+                    <div class="text-gray-600">
+                        <p class="text-lg font-medium">Drag and drop files here</p>
+                        <p class="text-sm">or click to select files</p>
+                    </div>
+                    <p class="text-xs text-gray-500">Supports: PNG, JPG, GIF, PDF (max 16MB)</p>
+                </div>
+                <input type="file" id="file-input" class="hidden" multiple>
+            </div>
+
+            <div id="upload-list" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadList = document.getElementById('upload-list');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFiles);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles({ target: { files } });
+        }
+
+        function handleFiles(e) {
+            const files = [...e.target.files];
+            files.forEach(uploadFile);
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const preview = document.createElement('div');
+            preview.className = 'file-preview rounded-lg p-4';
+            preview.innerHTML = `
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
+                        <p class="text-sm text-orange-500">Uploading...</p>
+                    </div>
+                </div>
+            `;
+            uploadList.insertBefore(preview, uploadList.firstChild);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    preview.innerHTML = `
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                ${data.has_thumbnail 
+                                    ? `<img src="/thumbnails/${data.filename}" class="w-12 h-12 object-cover rounded-full">`
+                                    : `<div class="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </div>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <input type="text" value="${data.url}" class="text-sm text-gray-500 bg-orange-50 px-3 py-1 rounded-full flex-1" readonly>
+                                    <button onclick="copyToClipboard('${data.url}')" class="warm-button px-4 py-1 rounded-full text-sm font-medium">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    preview.innerHTML = `
+                        <div class="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                            Error: ${data.error}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                preview.innerHTML = `
+                    <div class="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                        Error: Upload failed
+                    </div>
+                `;
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('bg-green-500');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('bg-green-500');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html> 

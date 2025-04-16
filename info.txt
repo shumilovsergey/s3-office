@@ -1,0 +1,41 @@
+S3-vibe Local File Host - CI/CD Pipeline Documentation
+
+1. Docker Executor:
+   - Uses python:3.11-slim as the base image
+   - Lightweight and suitable for CI/CD pipelines
+
+2. Pipeline Stages:
+   - test: Runs tests when commit message contains "test" or "deploy"
+   - deploy: Deploys the application when commit message contains "deploy"
+
+3. Caching:
+   - Caches pip packages to speed up builds
+   - Caches virtual environment
+
+4. Test Job:
+   - Runs when commit message contains "test" or "deploy"
+   - Uses pytest for testing
+   - Tests basic application functionality
+
+5. Deploy Job:
+   - Runs only when commit message contains "deploy"
+   - Deploys the application
+   - Stores uploads and thumbnails as artifacts
+   - Artifacts expire after 1 week
+
+6. Basic Tests:
+   - Tests the index page
+   - Tests the upload endpoint with and without files
+   - Tests file type validation
+
+Usage Instructions:
+
+For Testing Only:
+- Commit with a message containing "test"
+- Example: git commit -m "test: update UI components"
+
+For Testing and Deployment:
+- Commit with a message containing "deploy"
+- Example: git commit -m "deploy: release v1.0.0"
+
+The pipeline will automatically run the appropriate jobs based on your commit message. 

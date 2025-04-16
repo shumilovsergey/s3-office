@@ -1,0 +1,44 @@
+image: python:3.11-slim
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+
+cache:
+  paths:
+    - .pip-cache/
+    - venv/
+
+stages:
+  - test
+  - deploy
+
+before_script:
+  - python -V
+  - python -m venv venv
+  - source venv/bin/activate
+  - pip install -r requirements.txt
+  - pip install pytest
+
+test:
+  stage: test
+  script:
+    - pytest
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /test/i'
+    - if: '$CI_COMMIT_MESSAGE =~ /deploy/i'
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Deploying application..."
+    - echo "Running on port 8888..."
+    - python app.py
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /deploy/i'
+  environment:
+    name: production
+  artifacts:
+    paths:
+      - uploads/
+      - uploads/thumbnails/
+    expire_in: 1 week 
