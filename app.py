@@ -1,10 +1,12 @@
 import os
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, abort
 from werkzeug.utils import secure_filename
 import magic
 from PIL import Image
 import uuid
+import ipaddress
+from config import ALLOWED_IPS, FILE_ACCESS_ENABLED
 
 app = Flask(__name__)
 
@@ -40,6 +42,29 @@ def create_thumbnail(filepath, filename):
             return True
     return False
 
+def is_ip_allowed(ip):
+    if not FILE_ACCESS_ENABLED:
+        return True
+    
+    client_ip = ipaddress.ip_address(ip)
+    
+    for allowed_ip in ALLOWED_IPS:
+        try:
+            # Check if it's a CIDR range
+            if '/' in allowed_ip:
+                network = ipaddress.ip_network(allowed_ip, strict=False)
+                if client_ip in network:
+                    return True
+            # Check if it's a single IP
+            else:
+                if client_ip == ipaddress.ip_address(allowed_ip):
+                    return True
+        except ValueError:
+            # Skip invalid IP addresses or ranges
+            continue
+    
+    return False
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -52,6 +77,11 @@ def upload_file():
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
+    
+    client_ip = request.remote_addr
+    if not is_ip_allowed(client_ip):
+        app.logger.warning(f"Access denied for IP: {client_ip}")
+        abort(403, description=f"Access denied. Your IP {client_ip} is not whitelisted.") 
     
     if file and allowed_file(file.filename):
         filename = generate_unique_filename(file.filename)
@@ -73,10 +103,22 @@ def upload_file():
 
 @app.route('/files/<filename>')
 def serve_file(filename):
+    client_ip = request.remote_addr
+    
+    if not is_ip_allowed(client_ip):
+        app.logger.warning(f"Access denied for IP: {client_ip} trying to access file: {filename}")
+        abort(403, description="Access denied. Your IP is not whitelisted.")
+    
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/thumbnails/<filename>')
 def serve_thumbnail(filename):
+    client_ip = request.remote_addr
+    
+    if not is_ip_allowed(client_ip):
+        app.logger.warning(f"Access denied for IP: {client_ip} trying to access thumbnail: {filename}")
+        abort(403, description="Access denied. Your IP is not whitelisted.")
+    
     return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], 'thumbnails'), filename)
 
 if __name__ == '__main__':

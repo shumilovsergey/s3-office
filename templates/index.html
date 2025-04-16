@@ -184,7 +184,7 @@
                                 <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
                                 <div class="flex items-center space-x-2 mt-1">
                                     <input type="text" value="${data.url}" class="text-sm text-gray-500 bg-orange-50 px-3 py-1 rounded-full flex-1" readonly>
-                                    <button onclick="copyToClipboard('${data.url}')" class="warm-button px-4 py-1 rounded-full text-sm font-medium">
+                                    <button onclick="copyToClipboard(this, '${data.url}')" class="warm-button px-4 py-1 rounded-full text-sm font-medium">
                                         Copy
                                     </button>
                                 </div>
@@ -208,17 +208,29 @@
             });
         }
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                const button = event.target;
-                const originalText = button.textContent;
-                button.textContent = 'Copied!';
-                button.classList.add('bg-green-500');
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.classList.remove('bg-green-500');
-                }, 2000);
-            });
+        function copyToClipboard(button, text) {
+            // Create a temporary input element
+            const tempInput = document.createElement('input');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            
+            // Select and copy the text
+            tempInput.select();
+            document.execCommand('copy');
+            
+            // Remove the temporary input
+            document.body.removeChild(tempInput);
+            
+            // Update button text and style
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('bg-green-500');
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('bg-green-500');
+            }, 2000);
         }
     </script>
 </body>

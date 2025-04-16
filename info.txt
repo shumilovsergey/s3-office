@@ -28,6 +28,13 @@ S3-vibe Local File Host - CI/CD Pipeline Documentation
    - Tests the upload endpoint with and without files
    - Tests file type validation
 
+7. IP Whitelisting:
+   - Restricts file access to whitelisted IP addresses
+   - Supports both individual IPs and CIDR ranges
+   - Configurable through config.py
+   - Can be enabled/disabled with FILE_ACCESS_ENABLED setting
+   - Logs access denied attempts
+
 Usage Instructions:
 
 For Testing Only:
@@ -38,4 +45,9 @@ For Testing and Deployment:
 - Commit with a message containing "deploy"
 - Example: git commit -m "deploy: release v1.0.0"
 
-The pipeline will automatically run the appropriate jobs based on your commit message. 
+The pipeline will automatically run the appropriate jobs based on your commit message.
+
+IP Whitelisting Configuration:
+- Edit config.py to add or remove IP addresses
+- Use CIDR notation for IP ranges (e.g., '192.168.1.0/24')
+- Set FILE_ACCESS_ENABLED = False to disable IP whitelisting 
